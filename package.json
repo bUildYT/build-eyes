@@ -2,7 +2,7 @@
   "name": "build-eyes",
   "private": true,
   "type": "module",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "dependencies": {
     "@iwsdk/core": "^1.1.0-rc.2",
     "three": "npm:super-three@0.185.0",

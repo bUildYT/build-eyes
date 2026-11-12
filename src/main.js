@@ -1,6 +1,6 @@
 // bUild eYes — start page: the headset hosts the world, phones join as EYEs, computers/tablets turn their cameras into EYEs.
 const $ = id => document.getElementById(id);
-const q = new URLSearchParams(location.search);
+const q = new URLSearchParams(location.search.replace(/[.,;:!)]+$/, ''));   // a link copied out of a sentence may carry a trailing dot
 const isQuest = /OculusBrowser|Quest/i.test(navigator.userAgent);
 const isPhone = !isQuest && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 window.BE = { q, isQuest, version: __VERSION__ };
@@ -24,6 +24,7 @@ $('goEye').onclick = async () => {
   if (host) host.stop();
   (await import('./eye.js')).start(code);
 };
+$('goSolo').onclick = async () => { if (host) host.stop(); (await import('./director.js')).start(null, { solo: true }); };
 $('goCam').onclick = async () => {
   const code = codeOk(); if (!code) return;
   if (host) host.stop();
