@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>bUild eYes</title>
+<style>
+  :root { --gold: #ffc23a; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: #000; color: #eee; font: 16px/1.4 system-ui, sans-serif; overflow: hidden; }
+  #app { position: fixed; inset: 0; }
+  #start { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; text-align: center;
+    background: radial-gradient(ellipse at 50% 40%, #1c1608 0%, #000 70%); z-index: 5; }
+  #start h1 { margin: 0; font-weight: 300; letter-spacing: .08em; font-size: 34px; }
+  #start h1 b { color: var(--gold); font-weight: 600; }
+  #start p { margin: 0; max-width: 560px; color: #bbb; }
+  .btn { appearance: none; border: 1px solid var(--gold); background: rgba(255, 194, 58, .1); color: #fff; font: 600 20px system-ui; padding: 16px 34px; border-radius: 40px; cursor: pointer; min-width: 260px; }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.alt { border-color: #666; background: transparent; font-weight: 400; font-size: 17px; }
+  #code { font: 700 44px ui-monospace, monospace; letter-spacing: .25em; color: var(--gold); }
+  input#join { font: 700 34px ui-monospace, monospace; letter-spacing: .3em; width: 220px; text-align: center; text-transform: uppercase; background: #111; color: var(--gold); border: 1px solid #444; border-radius: 12px; padding: 8px; }
+  #labels { position: fixed; inset: 0; pointer-events: none; }
+  .mlabel { position: absolute; left: 0; top: 0; font: 600 14px system-ui; color: #fff; text-shadow: 0 1px 3px #000; white-space: nowrap; }
+  #hud { position: fixed; left: 0; right: 0; bottom: 0; padding: 18px 18px 28px; text-align: center; font: 600 20px system-ui; color: #fff; text-shadow: 0 1px 4px #000; pointer-events: none; }
+  #hud small { display: block; font-weight: 400; font-size: 15px; opacity: .85; }
+  #overlay { position: fixed; inset: 0; pointer-events: none; }
+  #overlay .bar { position: absolute; top: 14px; right: 14px; display: flex; gap: 10px; pointer-events: auto; }
+  #overlay .bar button { appearance: none; border: 1px solid rgba(255,255,255,.4); background: rgba(0,0,0,.45); color: #fff; font: 600 15px system-ui; padding: 10px 14px; border-radius: 20px; }
+  #dot { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border: 3px solid var(--gold); border-radius: 50%; box-shadow: 0 0 0 2px rgba(0,0,0,.5); }
+  #small { position: fixed; left: 10px; top: 10px; font: 12px ui-monospace, monospace; color: #888; z-index: 6; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="labels"></div>
+<div id="start">
+  <h1>bUild <b>eYes</b></h1>
+  <p id="pitch">A tiny living world on your real table. It hides behind your real things, reacts to your bare hands, and every phone in the room becomes another EYE on it.</p>
+  <div id="hostBox">
+    <button class="btn" id="go" disabled>checking…</button>
+    <p style="margin-top:14px">EYE code for phones: <span id="code">····</span></p>
+  </div>
+  <div id="eyeBox">
+    <p>Join a headset as an EYE:</p>
+    <input id="join" maxlength="4" placeholder="CODE" autocomplete="off">
+    <div style="height:10px"></div>
+    <button class="btn alt" id="goEye">Be an EYE (phone AR)</button>
+    <div style="height:8px"></div>
+    <button class="btn alt" id="goCam">Camera EYEs (this computer / tablet)</button>
+  </div>
+  <p id="info" style="font-size:14px;color:#888"></p>
+</div>
+<div id="overlay"><div id="dot" hidden></div><div class="bar"><button id="realign" hidden>re-align</button></div><div id="hud"></div></div>
+<div id="small"></div>
+<div id="ver" style="position:fixed;right:10px;bottom:6px;font:12px ui-monospace,monospace;color:#777;z-index:7;pointer-events:none"></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

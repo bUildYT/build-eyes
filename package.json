@@ -1,0 +1,23 @@
+{
+  "name": "build-eyes",
+  "private": true,
+  "type": "module",
+  "version": "0.2.0",
+  "dependencies": {
+    "@iwsdk/core": "^1.1.0-rc.2",
+    "three": "npm:super-three@0.185.0",
+    "peerjs": "^1.5.4"
+  },
+  "devDependencies": {
+    "@iwsdk/vite-plugin-dev": "^1.1.0-rc.2",
+    "vite": "^7.3.8"
+  },
+  "overrides": {
+    "three": "npm:super-three@0.185.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}

@@ -1,0 +1,40 @@
+// host in the emulator + director god view zoomed on the dragon; makes it breathe fire; screenshots → _work/dragon_*.png
+import { chromium } from 'playwright';
+import path from 'node:path';
+const CH = path.join(process.env.LOCALAPPDATA, 'Google/Chrome/Application/chrome.exe');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const browser = await chromium.launch({ executablePath: CH, headless: true, args: ['--ignore-certificate-errors', '--use-angle=d3d11'] });
+const mk = async () => { const ctx = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1280, height: 800 } }); const p = await ctx.newPage(); p.on('pageerror', e => console.log('PAGEERROR', e.message)); return p; };
+const H = await mk();
+await H.goto('https://localhost:8897/?role=host');
+await H.waitForFunction(() => window.IWER_DEVICE && !document.getElementById('go').disabled, null, { timeout: 60000 });
+const code = await H.evaluate(() => document.getElementById('code').textContent);
+await H.evaluate(() => { IWER_DEVICE.primaryInputMode = 'hand'; localStorage.removeItem('be:table'); });
+await H.click('#go');
+await H.waitForFunction(() => BE.hands && BE.planes && BE.planes.length, null, { timeout: 30000 });
+const tbl = await H.evaluate(() => BE.planes.find(p => p.l === 'table'));
+const tip = async (x, y, z, ms) => { await H.evaluate(([x, y, z]) => IWER_DEVICE.remote.dispatch('set_transform', { device: 'hand-right', position: { x, y, z }, anchor: 'index-tip', orientation: 'auto' }), [x, y, z]); await sleep(ms); };
+for (const sx of [-1, 1]) { await tip(tbl.x + sx * .1485, tbl.y + .09, tbl.z + .05, 400); await tip(tbl.x + sx * .1485, tbl.y + .007, tbl.z + .05, 1600); await tip(tbl.x + sx * .1485, tbl.y + .09, tbl.z + .05, 300); }
+await tip(tbl.x + .5, tbl.y + .4, tbl.z + .4, 200);
+const D = await mk();
+await D.goto(`https://localhost:8897/?role=pc&eye=${code}`);
+await D.waitForFunction(() => BE.W && BE.W.monsters.some(m => m.mem.kind === 'dragon'), null, { timeout: 45000 });
+await sleep(4000);
+await D.keyboard.press('0');
+await H.evaluate(() => { const m = BE.W.monsters.find(m => m.mem.kind === 'dragon'); m.mem.dskin = +(new URLSearchParams(location.search).get('skin') || 0); m.mem.size = 1; m.disposeBody(); m.setSize(); m.build(); m.plantFeet(); m.act = 'curious'; });
+await sleep(800);
+const shot = async (name, y, p, d) => { const at = await D.evaluate(() => { const m = BE.W.monsters.find(m => m.mem.kind === 'dragon'); return m.p.toArray(); }); await D.evaluate(([y, p, d, at]) => BE.god(y, p, d, at), [y, p, d, at]); await sleep(250); await D.screenshot({ path: `_work/dragon_${name}.png` }); };
+await shot('side', 1.3, .35, .28);
+await shot('front', 0, .25, .25);
+await H.evaluate(() => { const m = BE.W.monsters.find(m => m.mem.kind === 'dragon'); m.burst = 1.2; });
+await sleep(450);
+await shot('fire', .9, .3, .3);
+// throw it: does it glide?
+await H.evaluate(() => { const m = BE.W.monsters.find(m => m.mem.kind === 'dragon'); m.mode = 'air'; m.modeT = 0; m.lunge = { kind: 'hit', done: true }; m.vel3.set(.4, 1.1, .2); m.angVel.set(8, 3, 6); });
+await sleep(500);
+await shot('glide', 1.6, .2, .45);
+const st = await H.evaluate(() => { const m = BE.W.monsters.find(m => m.mem.kind === 'dragon'); return { mode: m.mode, act: m.act, y: m.p.y.toFixed(3), L: m.L.toFixed(3) }; });
+console.log('dragon', JSON.stringify(st));
+await sleep(2500);
+console.log('after landing', JSON.stringify(await H.evaluate(() => { const m = BE.W.monsters.find(m => m.mem.kind === 'dragon'); return { mode: m.mode, act: m.act, y: m.p.y.toFixed(3) }; })));
+await browser.close();
