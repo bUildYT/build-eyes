@@ -19,6 +19,7 @@ $('ver').textContent = 'v' + __VERSION__;
 const clean = s => (s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
 const GUEST = !!q.get('room'), ROOM = clean(q.get('room')) || clean(localStorage.getItem('hb:room')) || newRoom();
 if (!GUEST) localStorage.setItem('hb:room', ROOM);
+const DEMO = !import.meta.env.DEV && !GUEST && !isQuest && !q.has('flat') && !q.has('hands');   // PC or phone without a code: a view-only showpiece. The Quest never gets here
 const BASE = (/^(localhost|127\.)/.test(location.hostname) && __LAN__ ? __LAN__ : location.origin) + location.pathname.replace(/[^/]*$/, '');
 const LINK = BASE + 'hand.html?room=' + ROOM;
 
@@ -115,7 +116,7 @@ function carryMove(p) {
 }
 function carryEnd() { if (!carry) return; const g = carry.g; g.group.updateMatrix(); clay.stamp(g, g.group.matrix); root.remove(g.group); if (lastMove) lastMove.g.dispose(); lastMove = { g, M: g.group.matrix.clone(), cur: g.group.matrix.clone() }; carry = null; blip(520, .05); }
 function strokeBegin(id, tool, p, inv) {
-  if (!clay || GUEST) return; if (!active++) clay.begin();
+  if (!clay || GUEST || DEMO) return; if (!active++) clay.begin();
   const s = { tool, inv, f: p.clone(), last: p.clone(), len: 0, hold: 0, n: null, pp: null, rPrev: 0, first: true }; strokes.set(id, s); if (tool === 'area') areaS = []; if (tool === 'shape') { s.kind = shapeNow; s.p0 = p.clone(); s.h = 0; }
   if (tool === 'flat') { s.n = clay.normalAt(p); s.pp = p.clone(); }
   grain(tool, inv, true); if (tool === 'select') carryStart(p, inv); if (tool !== 'press') strokeMove(id, p, .016);
@@ -438,7 +439,7 @@ const controls = new OrbitControls(camera, renderer.domElement); controls.enable
 let flatOn = false; const ray = new THREE.Raycaster(), nd = new THREE.Vector2(), rO = new V3(), rD = new V3(), rA = new V3();
 function flatHit(e) { nd.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(nd, camera); root.updateMatrixWorld(); rO.copy(ray.ray.origin); root.worldToLocal(rO); rA.copy(ray.ray.origin).add(ray.ray.direction); root.worldToLocal(rA); rD.subVectors(rA, rO).normalize(); return clay ? clay.rayHit(rO, rD) : null; }
 const dom = renderer.domElement;
-dom.addEventListener('pointerdown', e => { if (!flatOn || e.button > 0) return; const h = flatHit(e); audio(); if (h) { controls.enabled = false; dom.setPointerCapture(e.pointerId); strokeBegin('p', S.tool, h, e.shiftKey || e.ctrlKey); } }, true);
+dom.addEventListener('pointerdown', e => { if (!flatOn || DEMO || e.button > 0) return; const h = flatHit(e); audio(); if (h) { controls.enabled = false; dom.setPointerCapture(e.pointerId); strokeBegin('p', S.tool, h, e.shiftKey || e.ctrlKey); } }, true);
 dom.addEventListener('pointermove', e => { if (flatOn && strokes.has('p')) { const h = flatHit(e); if (h) voice(strokeMove('p', h, .016)); } }, true);
 const pUp = () => { if (strokes.has('p')) { strokeEnd('p'); controls.enabled = true; } }; dom.addEventListener('pointerup', pUp, true); dom.addEventListener('pointercancel', pUp, true);
 addEventListener('keydown', e => { if (!flatOn) return; if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.shiftKey ? redo() : undo(); e.preventDefault(); } if (e.key === '[') { S.size = Math.max(.005, S.size * .85); buildBar(); } if (e.key === ']') { S.size = Math.min(.045, S.size * 1.18); buildBar(); } });
@@ -453,7 +454,7 @@ function buildBar() {
 function uiRoom() { const n = peers.size, el = $('room'); if (!el) return; const lnk = sync && sync.role === 'client' ? 'live' : sync && sync.role === 'hub' ? 'room open' : 'waiting for the sculptor…'; el.innerHTML = `<div>code <b>${ROOM}</b> · ${lnk}${n ? ' · ' + n + ' EYE' + (n > 1 ? 's' : '') : ''}</div>`; const q2 = document.createElement('div'); q2.id = 'qrb'; q2.appendChild(QR.canvas(LINK, 3)); el.appendChild(q2); if (panel.visible) drawPanel(); }
 function startFlat() {
   flatOn = true; $('start').hidden = true; $('ui').hidden = false; scene.background = new THREE.Color(0x030304); root.visible = true; root.position.set(0, 0, 0); root.rotation.set(0, 0, 0); root.scale.setScalar(1);
-  camera.position.set(.34, .3, .62); controls.enabled = true; controls.update(); buildBar(); uiRoom(); if (GUEST) $('bar').hidden = true; if (q.has('clean')) $('bar').hidden = $('room').hidden = true; if (q.has('cam')) startCam();
+  camera.position.set(.34, .3, .62); controls.enabled = true; controls.update(); buildBar(); uiRoom(); if (GUEST || DEMO) $('bar').hidden = true; if (DEMO) $('room').hidden = true; if (q.has('clean')) $('bar').hidden = $('room').hidden = true; if (q.has('cam')) startCam();
 }
 // webcam view: the live sculpt over the real camera picture. The picture is shown untouched: no exposure, gain or colour changes
 let camOn = false, fitT = 0, fitR = .15; const fitC = new V3(0, .1, 0), fitQ = new THREE.Quaternion();
@@ -487,7 +488,7 @@ function tick(frame, dt) {
   if (carry) carry.g.update(3); if (sel) sel.g.update(3); if (clay) { clay.busy = active > 0; clay.viewScale = renderer.xr.isPresenting ? root.scale.x : 1; runSym(renderer.xr.isPresenting ? 3 : 6); clay.update(renderer.xr.isPresenting ? (active ? 2.5 : 4.5) : 6); if (clay.meshVer !== lastMV && !active && !clay.dirty.size && (shadowT -= dt) <= 0) { lastMV = clay.meshVer; shadowT = .12; renderer.shadowMap.needsUpdate = true; } }
   const c = root.getWorldPosition(tmp); sun.position.copy(c).add(tmp2.set(-.7, 1.5, .8)); sun.target.position.copy(c); rimL.position.copy(c).add(tmp2.set(.9, .5, -1.1)); rimL.target.position.copy(c);
   peersStep(dt); if (sync) sync.step(dt);
-  if (!GUEST && saveAt && performance.now() > saveAt && !active) { for (const k of clay ? clay.unsavedTake() : []) saving.add(k); flushSave(); if (!saving.size) saveAt = 0; }
+  if (!GUEST && !DEMO && saveAt && performance.now() > saveAt && !active) { for (const k of clay ? clay.unsavedTake() : []) saving.add(k); flushSave(); if (!saving.size) saveAt = 0; }
   tMs += (performance.now() - t0 - tMs) * .05;
 }
 world.onXRFrame(tick);
@@ -517,4 +518,11 @@ const join = () => { const c = clean($('code').value); if (c) location.href = lo
 $('goJoin').onclick = join; $('code').onkeydown = e => { if (e.key === 'Enter') join(); };
 if (GUEST && !(isQuest && xrOK)) startFlat(); else if (q.has('flat')) startFlat();
 $('info').textContent = xrOK ? `Code for phones and PCs: ${ROOM}` : `Headset: open this page in the Quest browser. Your code: ${ROOM}`;
+if (DEMO) {
+  const P = (x, y, z) => new V3(x, y, z), C_ = c => new THREE.Color(c);
+  for (let k = 0; k < 8; k++) { const a0 = k / 8 * Math.PI * 2, gold = k % 2 === 1, at = t => { const an = a0 + t * 2.4, r = .06 + .13 * Math.sin(t * Math.PI * .85); return P(Math.cos(an) * r, .07 + t * .2, Math.sin(an) * r); }; for (let i = 0; i < 16; i++) { const t0 = i / 16, t1 = (i + 1) / 16; clay.segment(at(t0), at(t1), .017 * (1 - t0 * .75), .017 * (1 - t1 * .75), false, C_(gold ? '#ffc65c' : COLORS[0]), gold ? 'hgold' : 'pearl'); } }
+  const top = P(0, .3, 0); clay.segment(top, top, .03, .03, false, C_('#c44a35'), 'matte');
+  startFlat(); controls.target.set(0, .16, 0); if (innerWidth < innerHeight) camera.position.multiplyScalar(1.7); controls.autoRotate = true; controls.autoRotateSpeed = 1.4; controls.update(); document.querySelector('#start p').textContent = 'Sculpt in the air of your own room with nothing but your hands.';
+  const n = document.createElement('div'); n.style.cssText = 'position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:4;width:max-content;max-width:92vw;text-align:center;color:#c9c9cf;font-size:15px;display:flex;flex-direction:column;gap:10px;align-items:center'; n.innerHTML = '<span>Sculpted with bare hands. Open this page in the Meta Quest browser to try it.</span><button id="demoCode" style="font-size:14px;padding:8px 18px">Watch someone live with a code</button>'; document.body.append(n); $('demoCode').onclick = () => { $('start').hidden = false; };
+}
 console.log('[hand] ready', ROOM, GUEST ? 'guest' : 'host');
