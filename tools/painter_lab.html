@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><title>painter lab</title><style>html,body{margin:0;background:#111}canvas{display:block}</style></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { createPainterGPU, TexSet, SMART_KEYS } from '/src/studio/painter.js';
+import { unwrap, uvsUsable } from '/src/studio/unwrap.js';
+const q = new URLSearchParams(location.search);
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setSize(innerWidth, innerHeight); document.body.appendChild(r.domElement);
+r.toneMapping = THREE.ACESFilmicToneMapping;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x1a1a1e);
+scene.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), .04).texture; scene.environmentIntensity = .9;
+const sun = new THREE.DirectionalLight(0xfff0dd, 2.2); sun.position.set(-1, 2, 1.5); scene.add(sun);
+const cam = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, .01, 10); cam.position.set(0, .05, .62); cam.lookAt(0, 0, 0);
+const G = createPainterGPU(r);
+window.LAB = { THREE, r, scene, cam, G, TexSet, unwrap, uvsUsable, SMART_KEYS };
+function make(geo, x) {
+  const t0 = performance.now(); const g = unwrap(geo, { res: 1024 }); const tU = performance.now() - t0;
+  const m = new THREE.Mesh(g); m.position.x = x; scene.add(m);
+  const t1 = performance.now(); const ts = new TexSet(G, m, { res: 1024 }); const tB = performance.now() - t1;
+  m.material = ts.material; return { m, ts, tU, tB, charts: g.userData.unwrap.charts, usable: uvsUsable(g) };
+}
+const A = make(new THREE.TorusKnotGeometry(.075, .026, 220, 32), -.12);
+const B = make(new THREE.BoxGeometry(.13, .13, .13, 4, 4, 4), .14);
+B.m.rotation.set(.5, .6, 0);
+A.ts.addSmart(q.get('a') || 'rusty iron'); B.ts.addSmart(q.get('b') || 'chipped paint');
+// a paint layer on top with a brush stroke (gold across the knot) + a height stroke on the box
+const pl = A.ts.addLayer({ kind: 'paint', name: 'paint' });
+const dabs = []; for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2; const p = new THREE.Vector3(Math.cos(a) * .1, Math.sin(a) * .1, .03); dabs.push({ p, r: .018, dir: new THREE.Vector3(0, 0, -1) }); }
+const ok1 = A.ts.paint(dabs, { color: '#ffd24a', rough: .2, metal: 1, hard: .6, flow: .9, chan: [1, 1, 1, 0] });
+const hl = B.ts.addLayer({ kind: 'paint', name: 'carve' });
+const dabs2 = []; for (let i = 0; i < 30; i++) dabs2.push({ p: new THREE.Vector3(-.05 + i * .0035, Math.sin(i * .3) * .03, .065), r: .008, dir: new THREE.Vector3(0, 0, -1) });
+B.ts.paint(dabs2, { color: '#ffffff', height: -1, rough: .9, hard: .3, flow: 1, chan: [0, 0, 0, 1] });
+const t2 = performance.now(); A.ts.update(); B.ts.update(); const tC = performance.now() - t2;
+let ang = 0; function loop() { requestAnimationFrame(loop); if (!q.has('still')) { ang += .004; A.m.rotation.y = ang; } r.render(scene, cam); } loop();
+window.LAB.res = { A: { charts: A.charts, usable: A.usable, unwrapMs: Math.round(A.tU), bakeMs: Math.round(A.tB), layers: A.ts.layers.length }, B: { charts: B.charts, usable: B.usable, unwrapMs: Math.round(B.tU), bakeMs: Math.round(B.tB) }, compMs: Math.round(tC), painted: ok1, gl: r.getContext().getError() };
+window.LAB.A = A; window.LAB.B = B;
+</script></body></html>

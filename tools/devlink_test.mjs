@@ -1,0 +1,22 @@
+// opens the headset page in the Quest 3 emulator, enters AR, then drives it ONLY through tools/q.mjs (the same path Claude uses on the real Quest)
+import { chromium } from 'playwright';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+const CH = path.join(process.env.LOCALAPPDATA, 'Google/Chrome/Application/chrome.exe');
+const browser = await chromium.launch({ executablePath: CH, headless: true, args: ['--ignore-certificate-errors', '--use-angle=d3d11', '--enable-unsafe-swiftshader'] });
+const page = await (await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1280, height: 800 } })).newPage();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const q = (...a) => execFileSync('node', ['tools/q.mjs', ...a], { encoding: 'utf8' });
+const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) process.exitCode = 1; };
+await page.goto('https://localhost:8897/?role=host&who=emu', { waitUntil: 'load' });
+await page.waitForFunction(() => window.IWER_DEVICE && !document.getElementById('go').disabled, null, { timeout: 60000 });
+await page.evaluate(() => { IWER_DEVICE.primaryInputMode = 'hand'; });
+await page.click('#go');
+await page.waitForFunction(() => BE.world && BE.world.session, null, { timeout: 30000 });
+await sleep(3000);
+const who = q('who'); console.log(who.trim()); ok(/quest-emu/.test(who), 'page reports to the hub');
+const ev = q('eval', 'return { xr: BE.world.renderer.xr.isPresenting, n: 1 + 1 }', 'quest-emu'); ok(/"xr": true/.test(ev) && /"n": 2/.test(ev), 'remote eval inside the XR session');
+const st = q('state', 'quest-emu'); ok(/"xr":true/.test(st), 'state heartbeat says XR');
+const sh = q('shot', 'quest-emu'); console.log(sh.trim()); ok(/saved/.test(sh), 'screenshot from the eye saved');
+const lg = q('log', '5'); ok(/hello/.test(q('log', '400')), 'logs arrive');
+await browser.close();

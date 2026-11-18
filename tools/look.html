@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#3a3530;overflow:hidden}</style></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { createWorld } from '/src/world.js';
+import { createMechs, ensureEnv } from '/src/mechs.js';
+import { createHeroDragon } from '/src/herodragon.js';
+const q = new URLSearchParams(location.search);
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setSize(innerWidth, innerHeight); r.shadowMap.enabled = true; r.toneMapping = THREE.ACESFilmicToneMapping; document.body.appendChild(r.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x3a3530);
+const cam = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, .01, 20);
+const table = new THREE.Group(); scene.add(table);
+const desk = new THREE.Mesh(new THREE.BoxGeometry(1.2, .03, .7), new THREE.MeshStandardMaterial({ color: 0x6b4a2f, roughness: .7 })); desk.position.y = -.015; desk.receiveShadow = true; table.add(desk);
+const W = createWorld({ root: table, camera: cam }); W.vw = 0;
+ensureEnv(r, scene);
+const M = createMechs({ root: table, sfx: W.sfx, fx: W.fx });
+if (q.has('mechs')) M.spawnPair();
+const D = q.has('dragon') ? await createHeroDragon({ root: table, fx: W.fx, sfx: W.sfx, base: '/' }) : null;
+if (D && D.onBurn === undefined) D.onBurn = f => {};
+window.L = { W, M, D, cam, r, scene, table };
+const [cx, cy, cz] = (q.get('cam') || '0,.35,.55').split(',').map(Number); cam.position.set(cx, cy, cz); cam.lookAt(0, +(q.get('ly') || .06), 0);
+let t = 0; const dt = 1 / 60;
+window.L.adv = (sec) => { for (let i = 0; i < sec * 60; i++) { t += dt; M.step([], dt); if (D) D.step([], cam.position.clone(), dt, M.list); W.step(performance.now(), dt); } if (q.has('follow') && D) { const f = q.get('follow').split(',').map(Number); cam.position.copy(D.p).add(new THREE.Vector3(f[0] || .25, f[1] || .06, f[2] || .25)); cam.lookAt(D.p.clone().add(new THREE.Vector3(0, .03, 0))); } r.render(scene, cam); };
+window.L.ready = true; r.render(scene, cam);
+</script></body></html>

@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><title>bUild sTudio · smart materials</title><style>html,body{margin:0;background:#0d0d10;overflow:hidden}canvas{display:block}#t{position:fixed;inset:0;pointer-events:none;font:600 13px system-ui;color:#ddd}#t div{position:absolute;transform:translateX(-50%);text-shadow:0 1px 3px #000}</style></head><body><div id="t"></div>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { createPainterGPU, TexSet, SMART_KEYS } from '/src/studio/painter.js';
+import { unwrap } from '/src/studio/unwrap.js';
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setPixelRatio(1); r.setSize(innerWidth, innerHeight); document.body.appendChild(r.domElement);
+r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.1;
+const scene = new THREE.Scene(); scene.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), .04).texture; scene.environmentIntensity = .8;
+const sun = new THREE.DirectionalLight(0xfff0dd, 2.4); sun.position.set(-1.2, 2, 2); scene.add(sun);
+const rim = new THREE.DirectionalLight(0x9fc4ff, 1.2); rim.position.set(1.5, .5, -1.5); scene.add(rim);
+const cols = 4, rows = 3, cam = new THREE.PerspectiveCamera(28, innerWidth / innerHeight, .01, 20); cam.position.set(0, 0, 1.55); scene.add(cam); cam.updateMatrixWorld();
+const G = createPainterGPU(r);
+const shapes = [() => new RoundedBoxGeometry(.13, .13, .13, 3, .012), () => new THREE.TorusKnotGeometry(.05, .018, 180, 28), () => new THREE.SphereGeometry(.075, 64, 40), () => new THREE.CylinderGeometry(.06, .06, .13, 48, 4)];
+const labels = document.getElementById('t'); const all = [];
+SMART_KEYS.slice(0, cols * rows).forEach((k, i) => {
+  const g = unwrap(shapes[i % shapes.length](), { res: 1024 }); const m = new THREE.Mesh(g);
+  const x = (i % cols - (cols - 1) / 2) * .26, y = ((rows - 1) / 2 - Math.floor(i / cols)) * .25; m.position.set(x, y, 0); m.rotation.set(.45, .7 + i, 0); scene.add(m);
+  const ts = new TexSet(G, m, { res: 1024 }); ts.addSmart(k); ts.update(); m.material = ts.material; all.push(m);
+  const v = new THREE.Vector3(x, y - .1, 0).project(cam); const d = document.createElement('div'); d.textContent = k; d.style.left = (v.x * .5 + .5) * innerWidth + 'px'; d.style.top = (-v.y * .5 + .5) * innerHeight + 'px'; labels.appendChild(d);
+});
+r.render(scene, cam); window.BOARD = true;
+(function loop() { requestAnimationFrame(loop); r.render(scene, cam); })();
+</script></body></html>

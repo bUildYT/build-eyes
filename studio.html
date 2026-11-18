@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>bUild sTudio</title>
+<link rel="icon" href="./favicon.png">
+<style>
+  :root { --gold: #ffc23a; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: #000; color: #eee; font: 16px/1.45 system-ui, sans-serif; overflow: hidden; }
+  #app { position: fixed; inset: 0; }
+  #start { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center;
+    background: radial-gradient(ellipse at 50% 40%, #1c1608 0%, #000 70%); z-index: 5; }
+  h1 { margin: 0; font-weight: 300; letter-spacing: .08em; font-size: 38px; }
+  h1 b { color: var(--gold); font-weight: 600; }
+  p { margin: 0; max-width: 640px; color: #bbb; }
+  .btn { appearance: none; border: 1px solid var(--gold); background: rgba(255,194,58,.12); color: #fff; font: 600 22px system-ui; padding: 18px 44px; border-radius: 40px; cursor: pointer; min-width: 280px; }
+  .btn:disabled { opacity: .35; }
+  .keys { display: grid; grid-template-columns: auto auto; gap: 4px 18px; text-align: left; font-size: 14px; color: #aaa; max-width: 640px; }
+  .keys b { color: #fff; font-weight: 600; }
+  #qr { background: #fff; padding: 6px; border-radius: 10px; display: inline-block; }
+  #ver { position: fixed; right: 10px; bottom: 6px; font: 12px ui-monospace, monospace; color: #777; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="start">
+  <h1>bUild <b>sTudio</b></h1>
+  <p>Draw, sculpt, shape and paint in your real room. Controllers or bare hands. Everything lands live in Blender and on every phone that scans the code.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center"><button class="btn" id="goVR" hidden>ENTER VR · full world</button><button class="btn" id="goMR" hidden>MIXED REALITY · your room</button><button class="btn" id="goFlat" style="border-color:#66ccff;background:rgba(102,204,255,.12)">OPEN HERE · mouse, pen, touch</button></div>
+  <div class="keys">
+    <b>trigger / pinch</b><span>use the tool (press harder = thicker)</span>
+    <b>grip / middle-finger pinch</b><span>grab a thing · grab air = move the world · both = scale it</span>
+    <b>left hand</b><span>the palette (hands: turn your left palm up) · poke or point + trigger</span>
+    <b>right stick</b><span>← → tool · ↑ ↓ size</span>
+    <b>left stick</b><span>← → colour · ↑ ↓ material</span>
+    <b>A / B</b><span>undo / redo</span>
+    <b>X / Y</b><span>palette on/off / mirror</span>
+  </div>
+  <div><div id="qr"></div><p style="font-size:13px;margin-top:6px">phone · tablet · PC · Quest: scan or open <b id="roomLink" style="color:#66ccff"></b><br>= the SAME scene, live, everyone can sculpt · <span id="roomState" style="color:#66ccff"></span></p></div>
+  <p id="info" style="font-size:14px;color:#888"></p>
+</div>
+<div id="ver"></div>
+<script>window.__UA = navigator.userAgent;   // the real one: the WebXR emulator later pretends to be a Quest on desktop</script>
+<script type="module" src="/src/studio/studio.js"></script>
+</body>
+</html>

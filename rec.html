@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>bUild eYes · REC</title>
+<link rel="icon" href="./favicon.png">
+<style>
+  html, body { margin: 0; height: 100%; background: #050505; color: #ddd; font: 15px system-ui, sans-serif; }
+  #wrap { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+  header { display: flex; gap: 12px; align-items: center; padding: 12px 16px; }
+  header b { color: #ffc23a; letter-spacing: .08em; }
+  button { appearance: none; border: 1px solid #555; background: #111; color: #fff; font: 600 15px system-ui; padding: 10px 16px; border-radius: 22px; cursor: pointer; }
+  #rec { border-color: #ff3b30; min-width: 150px; font-size: 18px; }
+  #rec.on { background: #ff3b30; }
+  video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+  footer { padding: 8px 16px; color: #888; font-size: 13px; }
+  #t { font: 700 20px ui-monospace, monospace; color: #ff3b30; min-width: 80px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header>
+    <b>bUild eYes · REC</b>
+    <button id="rec">● REC</button><span id="t"></span>
+    <button id="src">choose source</button>
+    <button id="cast">open Quest casting</button>
+    <span id="info" style="color:#888"></span>
+  </header>
+  <video id="v" autoplay muted playsinline></video>
+  <footer>Space = record / stop · takes save straight into <b>Videos\bUild eYes\</b> · Quest: quick settings → Cast → Computer (this PC's Chrome, oculus.com/casting) · source = the casting tab or the scrcpy window</footer>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+let stream = null, rec = null, name = '', t0 = 0, timer = 0, queue = Promise.resolve(), first = true;
+const mime = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m));
+async function pick() {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 60, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true, selfBrowserSurface: 'exclude', preferCurrentTab: false });
+  $('v').srcObject = stream; $('info').textContent = stream.getVideoTracks()[0].label;
+  stream.getVideoTracks()[0].onended = () => { if (rec) stop(); stream = null; $('info').textContent = 'source closed'; };
+}
+const up = (blob, append) => queue = queue.then(() => fetch(`/__q/video?name=${name}${append ? '&append=1' : ''}`, { method: 'POST', body: blob }).then(r => r.json()).then(r => { if (r.file) $('info').textContent = r.file; }).catch(e => $('info').textContent = 'save failed: ' + e));
+async function start() {
+  if (!stream) await pick();
+  const d = new Date(), z = n => String(n).padStart(2, '0');
+  name = `quest_${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}.${mime.includes('mp4') ? 'mp4' : 'webm'}`;
+  first = true;
+  rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 16e6 });
+  rec.ondataavailable = e => { if (e.data.size) { up(e.data, !first); first = false; } };
+  rec.start(1000); t0 = performance.now(); $('rec').classList.add('on'); $('rec').textContent = '■ STOP';
+  timer = setInterval(() => { const s = (performance.now() - t0) / 1000 | 0; $('t').textContent = `${s / 60 | 0}:${String(s % 60).padStart(2, '0')}`; }, 250);
+}
+function stop() { if (!rec) return; rec.stop(); rec = null; clearInterval(timer); $('rec').classList.remove('on'); $('rec').textContent = '● REC'; $('t').textContent = 'saved'; }
+$('rec').onclick = () => rec ? stop() : start();
+$('src').onclick = pick;
+$('cast').onclick = () => window.open('https://www.oculus.com/casting', 'questcast', 'width=1280,height=760');
+addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); rec ? stop() : start(); } });
+</script>
+</body>
+</html>

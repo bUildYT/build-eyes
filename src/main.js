@@ -5,6 +5,7 @@ const isQuest = /OculusBrowser|Quest/i.test(navigator.userAgent);
 const isPhone = !isQuest && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 window.BE = { q, isQuest, version: __VERSION__ };
 import './qr.js';
+if (import.meta.env.DEV) import('./devlink.js');   // dev server only: Claude sees + drives this page
 // one address for every device: on this PC it is the LAN address (the phones + the headset reach it), online it is the page itself
 window.BE.base = /^(localhost|127.)/.test(location.hostname) && __LAN__ ? __LAN__ : location.origin + location.pathname.replace(/index.html$/, '');
 window.BE.qr = (url, px = 4) => { const c = QR.canvas(url, px); c.style.cssText = 'display:block;border-radius:8px'; return c; };

@@ -4,6 +4,10 @@
 //  2. tap anywhere on the table = drop food there (the creatures are fed on every EYE at once)
 import * as THREE from 'three';
 import { createWorld } from './world.js';
+import { createClay } from './clay.js';
+import { createMechs, ensureEnv } from './mechs.js';
+import { createHeroDragon } from './herodragon.js';
+import { createChallenges } from './challenge.js';
 import { frameFromCorners, applyFrame } from './table.js';
 import { joinRoom } from './net.js';
 const V3 = THREE.Vector3;
@@ -19,13 +23,13 @@ export async function start(code) {
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, .01, 30);
   const table = new THREE.Group(); table.visible = false; scene.add(table);
   const W = createWorld({ root: table, camera });
-  W.vw = 0; window.BE.W = W;
+  W.vw = 0; const clay = createClay({ root: table }); BE.clay = clay; const mechs = createMechs({ root: table, sfx: W.sfx, fx: W.fx }); ensureEnv(renderer, scene); const game = createChallenges({ root: table, clay, mechs, getHero: () => hero, W, host: false }); let hero = null; createHeroDragon({ root: table, fx: W.fx, sfx: W.sfx }).then(d => { hero = d; }); window.BE.W = W;
 
   const hud = (t, s = '') => { $('hud').innerHTML = t + (s ? `<small>${s}</small>` : ''); };
   let linked = false, last = 0;
   const net = joinRoom(code, {
     onState: s => { linked = s === 'linked'; if (s === 'linked') net.send({ t: 'hi', kind: 'phone' }); $('small').textContent = s === 'linked' ? `EYE · ${code}` : s === 'nohost' ? `no headset with code ${code} (yet)` : 'link lost · retrying'; },
-    onMsg: m => { if (m.t === 's') { W.applySnap(m); last = performance.now(); } else W.event(m); },
+    onMsg: m => { if (m.t === 's') { W.applySnap(m); last = performance.now(); } else if (m.t === 'clay') clay.set(m.s); else if (m.t === 'mech') mechs.apply(m); else if (m.t === 'mx') mechs.event(m); else if (m.t === 'ch' || m.t === 'chS') game.apply(m); else if (m.t === 'hdS') { if (hero) hero.apply(m); } else if (m.t === 'hd') { if (hero) hero.event(m); } else W.event(m); },
   });
 
   // the dot = where the phone looks on a real surface (hit test from the screen centre)
@@ -69,7 +73,7 @@ export async function start(code) {
       const pose = r.length && r[0].getPose(ref);
       if (pose) { const p = pose.transform.position; hit = new V3(p.x, p.y, p.z); BE.hit = hit; reticle.position.copy(hit); reticle.visible = true; } else { hit = null; reticle.visible = false; }
     }
-    if (placed) W.puppetStep(performance.now(), dt);
+    if (placed) { W.puppetStep(performance.now(), dt); clay.step([], table.worldToLocal(camera.position.clone()), dt); mechs.puppetStep(dt); if (hero) hero.puppetStep(dt); game.viewStep(dt); game.face(table.worldToLocal(camera.position.clone())); }
     if (placed && linked && performance.now() - last > 1500) hud('', 'no world from the headset for a moment…');
     renderer.render(scene, camera);
   });

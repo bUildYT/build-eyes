@@ -7,13 +7,17 @@ import * as THREE from 'three';
 import { World, SessionMode, DepthOccludable, OcclusionShadersMode } from '@iwsdk/core';
 import { createWorld } from './world.js';
 import { Monster } from './monster.js';
+import { createClay } from './clay.js';
+import { createMechs, ensureEnv } from './mechs.js';
+import { createHeroDragon } from './herodragon.js';
+import { createChallenges } from './challenge.js';
 import { frameFromCorners, frameAt, applyFrame, A4 } from './table.js';
 import { hostRoom, newCode } from './net.js';
 const V3 = THREE.Vector3;
 const $ = id => document.getElementById(id);
 const log = (...a) => { console.log('[eyes]', ...a); };
 
-let world, table, W, room, tableEnt;
+let world, table, W, room, tableEnt, clay, mechs, hero = null, game;
 const code = localStorage.getItem('be:code') || newCode(); localStorage.setItem('be:code', code);
 
 export async function prepare({ ar }) {
@@ -44,12 +48,12 @@ export async function prepare({ ar }) {
     onCount: n => { $('small').textContent = `${n} EYE${n === 1 ? '' : 's'} linked`; if (n) xrSay(`${n} EYE${n === 1 ? '' : 's'} watching`, 2.5); },
     onMsg: (m) => {
       if (m.t === 'food' && placed) W.dropFood(new V3().fromArray(m.p));
-      if (m.t === 'hi') xrSay(`a new EYE joined`, 2.5);
+      if (m.t === 'hi') { xrSay(`a new EYE joined`, 2.5); room.send({ t: 'clay', s: clay.strokes }); }
     },
     onError: e => log('net', e.type),
   });
   W.onEvent = ev => room && room.send(ev);
-  setInterval(() => { if (placed && room && room.count) room.send(W.snap()); }, 50);
+  setInterval(() => { if (placed && room && room.count) { room.send(W.snap()); room.send(mechs.snap()); if (hero) room.send(hero.snap()); if (game.phase !== 'off') room.send(game.snap()); } }, 50);
 }
 
 export function stop() { if (room) room.close(); room = null; if (world) { world.renderer.setAnimationLoop(null); world.renderer.domElement.remove(); } }
@@ -63,6 +67,20 @@ function build() {
   W = createWorld({ root: table, camera: world.camera, onHurt: a => { hurtA = Math.min(.6, hurtA + a); }, say: t => xrSay(t, 3) });
   W.vw = 0; W.staleMs = 200; W.goneMs = 600;
   window.BE.W = W;
+  clay = createClay({ root: table, say: (t, s) => xrSay(t, s || 3), sfx: W.sfx }); window.BE.clay = clay;
+  clay.onChange = s => room && room.send({ t: 'clay', s });
+  ensureEnv(world.renderer, world.scene);
+  mechs = createMechs({ root: table, sfx: W.sfx, fx: W.fx, say: (t, s) => xrSay(t, s || 3) }); BE.mechs = mechs;
+  mechs.onEvent = ev => room && room.send(ev);
+  clay.extra('mechs', '⚔', '#4a3a10', -.034, -.036, () => mechs.spawnPair());
+  clay.extra('dragon', '🐉', '#5a1a10', 0, -.036, () => { if (hero) hero.g.visible = !hero.g.visible; });
+  clay.extra('critters', '🐞', '#183a20', .034, -.036, () => W.addMonster(true));
+  game = createChallenges({ root: table, clay, mechs, getHero: () => hero, W, say: (t, s) => xrSay(t, s || 3), sfx: W.sfx }); BE.game = game;
+  game.onEvent = ev => room && room.send(ev);
+  clay.extra('next', '🎯', '#1a3a5a', -.034, -.068, () => game.start());
+  clay.extra('test', '▶', '#1a5a2a', 0, -.068, () => game.test());
+  clay.extra('again', '↺', '#3a3a3a', .034, -.068, () => { if (game.i >= 0) game.retry(); else game.start(0); });
+  createHeroDragon({ root: table, fx: W.fx, sfx: W.sfx }).then(d => { hero = d; BE.hero = d; d.onEvent = ev => room && room.send(ev); d.onBurn = f => { if (f.act !== 'down') { f.hp = 0; f.act = 'down'; f.actT = 0; } }; log('hero dragon loaded'); }).catch(e => log('hero dragon failed', e.message));
   card = (() => {
     const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 160; const g = cv.getContext('2d');
     const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
@@ -140,7 +158,7 @@ function finishPlace(f, paper) {
   localStorage.setItem('be:table', JSON.stringify({ p: f.pos.toArray(), r: f.yaw, paper }));
   xrSay(paper ? `v${BE.version} · paper found (${(f.measured * 100).toFixed(1)} cm) · EYE code ${code}` : `here they come · EYE code ${code}`, 5);
   W.sfx.chirp('happy', 1);
-  if (first && !W.monsters.length) for (let i = 0; i < 3; i++) setTimeout(() => W.addMonster(true, i === 0 ? { kind: 'dragon' } : undefined), 600 + i * 700);
+  if (first && !mechs.list.length) setTimeout(() => mechs.spawnPair(), 900);
   log('placed', paper ? 'paper' : 'solo', f.measured.toFixed(3), f.err.toFixed(3));
 }
 
@@ -153,7 +171,7 @@ function gestures(dt) {
     clapCool = 2.5; const m = W.addMonster(true); if (m) W.sfx.chirp('curious', 1);
   }
   for (const h of hs) {
-    const near = W.monsters.some(m => m.p.distanceTo(h.pinchPt) < .05) || W.monsters.some(m => m.held === h);
+    const near = W.monsters.some(m => m.p.distanceTo(h.pinchPt) < .05) || W.monsters.some(m => m.held === h) || mechs.list.some(m => m.heldBy === h || m.p.distanceTo(h.pinchPt) < .08);
     if (h.pinch && !airPinch.has(h) && !near && h.pinchPt.y > .06) airPinch.set(h, true);
     if (!h.pinch && airPinch.has(h)) { airPinch.delete(h); if (!near) W.dropFood(h.pinchPt.clone()); }
     if (near) airPinch.delete(h);
@@ -166,6 +184,7 @@ function gestures(dt) {
 let builds = -1, rebuildT = 0;
 function tick(frame, dt) {
   dt = Math.min(.05, dt || .016);
+  if (BE.xrFrame) BE.xrFrame();
   const now = performance.now();
   const ref = world.xrReferenceSpace, hands = readHands(frame, ref);
   BE.hands = hands; BE.placed = placed; BE.table = table;
@@ -174,7 +193,11 @@ function tick(frame, dt) {
   else {
     W.takeHands(hands.map(h => ({ ...h, P: h.P.map(p => table.worldToLocal(p.clone())) })), now, .85);
     W.step(now, dt);
-    gestures(dt);
+    clay.step(W.hands, table.worldToLocal(new V3().setFromMatrixPosition(world.renderer.xr.getCamera().matrixWorld)), dt);
+    if (!clay.busy()) gestures(dt);
+    if (mechs.paused) mechs.poseAll(dt); else mechs.step(W.hands, dt);
+    game.step(W.hands, dt); game.face(table.worldToLocal(new V3().setFromMatrixPosition(world.renderer.xr.getCamera().matrixWorld)));
+    if (hero && hero.g.visible) hero.step(W.hands, table.worldToLocal(new V3().setFromMatrixPosition(world.renderer.xr.getCamera().matrixWorld)), dt, mechs.list);
   }
   // new creature meshes → let IWSDK's depth occlusion patch them too (re-qualify the table entity)
   if (Monster.builds !== builds && (rebuildT += dt) > .15) {

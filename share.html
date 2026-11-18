@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>bUild eYes · SHARE</title>
+<link rel="icon" href="./favicon.png">
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #070707; color: #ddd; font: 15px system-ui, sans-serif; }
+  header { padding: 14px 18px; display: flex; gap: 14px; align-items: center; }
+  header b { color: #ffc23a; letter-spacing: .08em; }
+  #drop { margin: 0 18px; border: 2px dashed #555; border-radius: 16px; padding: 34px; text-align: center; color: #aaa; cursor: pointer; }
+  #drop.on { border-color: #ffc23a; color: #ffc23a; }
+  #list { display: flex; flex-wrap: wrap; gap: 16px; padding: 18px; }
+  .card { background: #121212; border: 1px solid #2a2a2a; border-radius: 14px; padding: 12px; width: 260px; }
+  .card model-viewer { width: 100%; height: 200px; background: #0c0c0c; border-radius: 10px; }
+  .card .row { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+  .card .n { font-weight: 600; word-break: break-all; }
+  .card small { color: #888; }
+  #big { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: none; place-items: center; z-index: 9; text-align: center; }
+  #big.on { display: grid; }
+  #big div { font-size: 22px; margin-top: 14px; }
+  /* phone view */
+  #view { position: fixed; inset: 0; display: none; }
+  #view model-viewer { width: 100%; height: 100%; background: radial-gradient(#1a1a1a, #050505); }
+  #arb { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); background: #ffc23a; color: #000; border: 0; font: 700 18px system-ui; padding: 16px 26px; border-radius: 30px; }
+  #vt { position: absolute; top: 12px; left: 14px; color: #ffc23a; font-weight: 700; letter-spacing: .08em; text-shadow: 0 1px 4px #000; }
+</style>
+</head>
+<body>
+<div id="pc">
+  <header><b>bUild eYes · SHARE</b><span>drop a sculpt here → scan the QR with any phone → it sees your model, in AR on its own table</span></header>
+  <div id="drop">drop <b>.glb .gltf .obj .stl .fbx .ply</b> here (or click) · from Gravity Sketch / Shapelab / Blender exports<br><small id="msg"></small></div>
+  <div id="list"></div>
+</div>
+<div id="big"></div>
+<div id="view">
+  <div id="vt">bUild eYes</div>
+  <model-viewer id="mv" camera-controls touch-action="pan-y" auto-rotate shadow-intensity="1" exposure="1.05" environment-image="neutral" ar ar-modes="webxr scene-viewer quick-look" ar-placement="floor">
+    <button slot="ar-button" id="arb">📱 see it on your table</button>
+  </model-viewer>
+</div>
+<script type="module" src="./src/share.js"></script>
+</body>
+</html>

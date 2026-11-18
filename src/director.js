@@ -5,6 +5,10 @@
 //  · EYE 0 = the god view (free 3D camera, drag to turn) — works even with no camera at all
 import * as THREE from 'three';
 import { createWorld } from './world.js';
+import { createClay } from './clay.js';
+import { createMechs, ensureEnv } from './mechs.js';
+import { createHeroDragon } from './herodragon.js';
+import { createChallenges } from './challenge.js';
 import { A4 } from './calib.js';
 import { paperPose } from './paperpose.js';
 import { joinRoom, hostRoom, newCode } from './net.js';
@@ -38,7 +42,7 @@ export async function start(code, { solo = false } = {}) {
   const scene = new THREE.Scene();
   const table = new THREE.Group(); scene.add(table);                 // director: world = table frame
   const camera = new THREE.PerspectiveCamera(50, 16 / 9, .01, 30);
-  const W = createWorld({ root: table, camera }); W.vw = 0; window.BE.W = W;
+  const W = createWorld({ root: table, camera }); W.vw = 0; const clay = createClay({ root: table }); BE.clay = clay; const mechs = createMechs({ root: table, sfx: W.sfx, fx: W.fx }); ensureEnv(renderer, scene); const game = createChallenges({ root: table, clay, mechs, getHero: () => hero, W, host: false }); let hero = null; createHeroDragon({ root: table, fx: W.fx, sfx: W.sfx }).then(d => { hero = d; }); window.BE.W = W;
   // the paper, drawn faintly in the god view only
   const paper = new THREE.Mesh(new THREE.PlaneGeometry(A4[0], A4[1]), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .25 }));
   paper.rotation.x = -Math.PI / 2; paper.position.y = .0005; table.add(paper);
@@ -50,7 +54,7 @@ export async function start(code, { solo = false } = {}) {
     ? hostRoom(code, { onCount: n => eyes = n, onMsg: m => { if (m.t === 'food') W.dropFood(new V3().fromArray(m.p)); } })
     : joinRoom(code, {
       onState: s => { linked = s === 'linked'; if (linked) net.send({ t: 'hi', kind: 'director' }); },
-      onMsg: m => { if (m.t === 's') { W.applySnap(m); lastSnap = performance.now(); } else W.event(m); },
+      onMsg: m => { if (m.t === 's') { W.applySnap(m); lastSnap = performance.now(); } else if (m.t === 'clay') clay.set(m.s); else if (m.t === 'mech') mechs.apply(m); else if (m.t === 'mx') mechs.event(m); else if (m.t === 'ch' || m.t === 'chS') game.apply(m); else if (m.t === 'hdS') { if (hero) hero.apply(m); } else if (m.t === 'hd') { if (hero) hero.event(m); } else W.event(m); },
     });
   if (solo) {
     W.onEvent = ev => net.send(ev);
@@ -131,6 +135,8 @@ export async function start(code, { solo = false } = {}) {
     requestAnimationFrame(frame);
     const now = performance.now(), dt = Math.min(.05, (now - prev) / 1000); prev = now;
     if (solo) W.step(now, dt); else W.puppetStep(now, dt);
+    clay.step([], table.worldToLocal(camera.position.clone()), dt);
+    if (solo) { mechs.step([], dt); if (hero) hero.step([], camera.position.clone(), dt, mechs.list); } else { mechs.puppetStep(dt); if (hero) hero.puppetStep(dt); game.viewStep(dt); }
     if (auto && (autoT -= dt) <= 0) { const ok = EYES.map((E, i) => i).filter(i => i !== cur && (EYES[i].god || EYES[i].seen)); if (ok.length) cur = ok[Math.random() * ok.length | 0]; autoT = 2.5 + Math.random() * 2.5; }
     const E = EYES[cur];
     const OW = vertical ? 1080 : 1920, OH = vertical ? 1920 : 1080; if (out.width !== OW) { out.width = OW; out.height = OH; }

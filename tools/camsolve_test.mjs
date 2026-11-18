@@ -1,0 +1,4 @@
+import { solveCamera, lookQ, rot } from '../src/hand/camsolve.js';
+const P = [.3, 1.25, .9], Cn = [0, 1, -.1], q = lookQ(P, Cn), f = 1.9, iq = [-q[0], -q[1], -q[2], q[3]], S = []; let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+for (let i = 0; i < 260; i++) { const X = [Cn[0] + (rnd() - .5) * .6, Cn[1] + (rnd() - .5) * .4, Cn[2] + (rnd() - .5) * .5], v = rot(iq, [X[0] - P[0], X[1] - P[1], X[2] - P[2]]), bad = i % 12 === 0 ? .15 : 0; S.push({ X, u: f * v[0] / -v[2] + (rnd() - .5) * .012 + bad, v: f * v[1] / -v[2] + (rnd() - .5) * .012 }); }
+const t = performance.now(), r = solveCamera(S), dt = performance.now() - t, e = Math.hypot(r.p[0] - P[0], r.p[1] - P[1], r.p[2] - P[2]); console.log('pos error', e.toFixed(3), 'f', r.f.toFixed(2), 'rms', r.rms.toFixed(4), dt.toFixed(0) + ' ms'); console.log(e < .06 && Math.abs(r.f - f) < .15 ? 'ALL GREEN' : 'FAILED');

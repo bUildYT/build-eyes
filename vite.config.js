@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { iwsdkDev } from '@iwsdk/vite-plugin-dev';
 import os from 'node:os';
 import fs from 'node:fs';
+import { devHub } from './tools/devhub.js';
 const ip = Object.values(os.networkInterfaces()).flat().find(i => i && i.family === 'IPv4' && !i.internal && /^(192.168|10.|172.)/.test(i.address));
 const VERSION = JSON.parse(fs.readFileSync('./package.json', 'utf8')).version;
 
@@ -13,6 +14,6 @@ export default defineConfig({
   // no hot reload: a reload in the middle of a headset session would throw you out of it. Refresh = newest version.
   server: { host: true, port: 8897, strictPort: true, hmr: false },
   preview: { host: true, port: 8898 },
-  plugins: [iwsdkDev({ emulator: { device: 'metaQuest3', environment: 'home_office' } })],
-  build: { target: 'es2022', chunkSizeWarningLimit: 4000 },
+  plugins: [devHub(), iwsdkDev({ emulator: { device: 'metaQuest3', environment: 'home_office' } })],
+  build: { target: 'es2022', chunkSizeWarningLimit: 4000, rollupOptions: { input: { main: 'index.html', studio: 'studio.html', hand: 'hand.html', share: 'share.html', rec: 'rec.html' } } },
 });

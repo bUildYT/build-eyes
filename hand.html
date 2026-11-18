@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>hAnd bUilder</title>
+<link rel="icon" href="./favicon.png">
+<style>
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: #000; color: #fff; font: 300 16px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; overflow: hidden; -webkit-font-smoothing: antialiased; }
+  #app { position: fixed; inset: 0; }
+  #start { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; text-align: center; background: radial-gradient(ellipse at 50% 42%, #17171a 0%, #000 68%); }
+  #mark { width: 62px; height: 62px; }
+  h1 { margin: 0; font-weight: 200; font-size: clamp(38px, 7vw, 66px); letter-spacing: .03em; }
+  #start p { margin: 0; max-width: 540px; color: #a8a8ae; font-size: 18px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  button, input { font: 400 17px system-ui, sans-serif; color: #fff; border-radius: 40px; border: 1px solid #ffffff42; background: #ffffff0d; padding: 13px 26px; outline: none; }
+  button { cursor: pointer; } button:hover { background: #ffffff1c; }
+  button.main { background: #fff; color: #000; border-color: #fff; font-weight: 500; font-size: 20px; padding: 16px 44px; box-shadow: 0 0 44px #ffffff40; }
+  input { width: 104px; text-align: center; letter-spacing: .2em; text-transform: uppercase; }
+  #ver { position: fixed; right: 12px; bottom: 8px; font: 11px ui-monospace, monospace; color: #55555c; z-index: 6; }
+  #ui { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+  #bar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; width: max-content; max-width: 96vw; pointer-events: auto; padding: 8px 12px; border-radius: 26px; background: #0c0c0fd9; border: 1px solid #ffffff1f; }
+  #bar button { font-size: 13px; padding: 7px 13px; background: transparent; border-color: #ffffff26; }
+  #bar button.on { background: #fff; color: #000; }
+  #bar i { width: 22px; height: 22px; border-radius: 50%; display: inline-block; cursor: pointer; border: 2px solid #0000; }
+  #bar i.on { border-color: #fff; box-shadow: 0 0 10px #fff9; }
+  #bar input[type=range] { width: 90px; padding: 0; accent-color: #fff; letter-spacing: 0; }
+  #top { position: absolute; left: 16px; top: 12px; font-weight: 200; font-size: 21px; letter-spacing: .02em; }
+  #room { position: absolute; right: 14px; top: 12px; text-align: right; font-size: 13px; color: #a8a8ae; pointer-events: auto; }
+  #room b { color: #fff; font-weight: 500; letter-spacing: .12em; }
+  #qrb { margin-top: 8px; background: #fff; padding: 6px; border-radius: 10px; display: inline-block; }
+  #qrb canvas { display: block; width: 116px; height: 116px; }
+  #arBtn { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); pointer-events: auto; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="ui" hidden>
+  <div id="top">hAnd bUilder</div>
+  <button id="arBtn" hidden>See it in my room</button>
+  <div id="room"></div>
+  <div id="bar"></div>
+</div>
+<div id="start">
+  <svg id="mark" viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="3"><path d="M50 4 96 50 50 96 4 50Z"/><circle cx="50" cy="50" r="27"/></svg>
+  <h1>hAnd bUilder</h1>
+  <p>Shape real-feeling clay on your own table with nothing but your hands. Everyone with the code watches live.</p>
+  <div class="row"><button class="main" id="goXR" hidden>Enter with my hands</button><button id="goHere">Sculpt on this screen</button></div>
+  <div class="row"><input id="code" maxlength="5" placeholder="CODE" autocomplete="off" spellcheck="false"><button id="goJoin">Watch live</button></div>
+  <p id="info" style="font-size:14px"></p>
+</div>
+<div id="ver"></div>
+<script>window.__UA = navigator.userAgent;</script>
+<script type="module" src="/src/hand/app.js"></script>
+</body>
+</html>
